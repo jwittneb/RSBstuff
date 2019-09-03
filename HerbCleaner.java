@@ -11,7 +11,7 @@ import java.util.concurrent.Callable;
 
 
 @Script.Manifest(name="Herb Cleaning", description="test", properties="author=John; topic=999; client=4")
-
+// A crude script for cleaning herbs I had lying around, mostly just testing
 public class HerbCleaner extends PollingScript<ClientContext> {
 
   Random rand = new Random();
@@ -34,15 +34,37 @@ public class HerbCleaner extends PollingScript<ClientContext> {
 
   @Override
   public void poll() {
+    assert(!ctx.bank.opened());
     if (col < 4) {
       clean(row, col);
       col += 1;
     } else if ((row == 8) && (col == 4)) {
       System.out.println("Finished Cleaning Inventory");
+      bankCleanHerbs();
+      withdrawHerbs();
+      row = 0;
+      col = 0;
     } else {
       row += 1;
       col = 0;
     }
+  }
+
+  public void bankCleanHerbs() {
+    assert(!ctx.bank.opened());
+    ctx.bank.open();
+    ctx.bank.deposit(CLEAN_HERB_ID, 28);
+  }
+
+  public void withdrawHerbs() {
+    assert(ctx.bank.opened());
+    if (!ctx.bank.select().id(DIRTY_HERB_ID).isEmpty()) {
+      ctx.bank.withdraw(DIRTY_HERB_ID, 28);
+    } else {
+      ctx.controller.stop();
+    }
+    boolean succ = ctx.bank.close();
+    assert(succ);
   }
 
   public void clean(int posx, int posy) {
